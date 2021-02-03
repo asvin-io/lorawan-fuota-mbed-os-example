@@ -19,9 +19,24 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
     ```
     This will create binary files in `BUILD/FF1705_L151CC/GCC_ARM-TINY/` folder
 6. From the folder `BUILD/FF1705_L151CC/GCC_ARM-TINY/` copy the `mbed-os-example-lorawan-fuota.bin` file to the development board (mounted as flash storage device).
+7. After flashing, press on-board reset button and connect the device to serial monitor with baud rate of 115200 to view the device logs.
+
 
 ## Signing tool installation and setup of keys
-1. 
+`Tip!!` On Windows, it is better to use Ubuntu18 on WSL2 to run this tool 
+1. Requirements: [Node.js 8 o higher](https://nodejs.org/en/), [Python 2.7](https://www.python.org/download/releases/2.7/), [OpenSSL](https://www.openssl.org/)
+2. Install the [lorawan-fota-signing-tool](https://github.com/janjongboom/lorawan-fota-signing-tool):
+    ```
+    $ npm install lorawan-fota-signing-tool -g
+    ```
+3. Create a public/private key pair:
+    ```
+    $ lorawan-fota-signing-tool create-keypair -d yourdomain.com -m your-device-model-string
+    ```
+    Example: 
+    ```
+    $ lorawan-fota-signing-tool create-keypair -d abc.com -m LTEK
+    ```
 
 ## Creating a delta update
 1. Before building the aplication with new updates, copy the file `mbed-os-example-lorawan-fuota_update.bin` to `./updates` folder. And rename it as `v1_update.bin`
@@ -32,12 +47,12 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
     $ lorawan-fota-signing-tool sign-delta --old ./updates/v1_update.bin --new ./updates/v2_update.bin --output-format bin -o ./updates/v1_to_v2.bin
     ```
 
-## Firmware update using Chirpstack server
+## Firmware update using [Chirpstack server](https://www.chirpstack.io/)
 1. In the Chirpstack Application server, select the device and click on `CREATE FIRMWARE UPDATE JOB` in the FIRMWARE column of the device details.
 2. Upload the diff file `v1_to_v2.bin` to update job.
 3. Specify all other details. For example:
     ```
-    Firmware update job-name: FUOTA_TEST_1
+    Firmware update job-name: FUOTA_TEST
     Select firmware file: v1_to_v2.bin
     Redundant frames: 5
     Unicast timeout: 15
@@ -47,5 +62,6 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
     Multicast-timeout: 128 seconds
     ```
 4. Then create fuota deployment
-5. This will create a `Multicast-group` for the mulcast session setup and update distribution
+5. This will create a Multicast-group for the mulcast session setup and distribute update
+
 
