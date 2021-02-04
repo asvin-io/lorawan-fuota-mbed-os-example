@@ -11,15 +11,21 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
     ```
     $ mbed import https://github.com/asvin-io/lorawan-fuota-mbed-os-example.git
     ```
-3. In main.cpp specify the `APP_EUI`, `APP_KEY`, and `GEN_APP_KEY`. Here the `DEV_EUI` will be fetched from the internal memory. Please specify this Device EUI in your LoRa Server.
-4. In mbed_app.json specify the frequency plan
-5. Build the application using:
+3. Open the workspace in Mbed Studio and run the following commands in terminal to install mbed dependencies and tools
+    ```
+    $mbed deploy
+    $cd ./mbed-os
+    $pip install -r requirements.txt
+    ```
+4. In main.cpp specify the `APP_EUI`, `APP_KEY`, and `GEN_APP_KEY`. Here the `DEV_EUI` will be fetched from the internal memory. Please specify this Device EUI in your LoRa Server.
+5. In mbed_app.json specify the frequency plan
+6. Compile and build the application using:
     ```
     $ mbed compile -m FF1705_L151CC -t GCC_ARM --profile=./profiles/tiny.json
     ```
     This will create binary files in `BUILD/FF1705_L151CC/GCC_ARM-TINY/` folder
-6. From the folder `BUILD/FF1705_L151CC/GCC_ARM-TINY/` copy the `mbed-os-example-lorawan-fuota.bin` file to the development board (mounted as flash storage device).
-7. After flashing, press on-board reset button and connect the device to serial monitor with baud rate of 115200 to view the device logs.
+7. From the folder `BUILD/FF1705_L151CC/GCC_ARM-TINY/` copy the `lorawan-fuota-mbed-os-example.bin` file to the development board (mounted as flash storage device).
+8. After flashing, press on-board reset button and connect the device to serial monitor with baud rate of 115200 to view the device logs.
 
 
 ## Signing tool installation and setup of keys
@@ -41,11 +47,28 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
 ## Creating a delta update
 1. Before building the aplication with new updates, copy the file `mbed-os-example-lorawan-fuota_update.bin` to `./updates` folder. And rename it as `v1_update.bin`
 2. Now build the application with updates. It will create binary files with necessary updates in `BUILD/FF1705_L151CC/GCC_ARM-TINY/` folder
-3. Then copy the file `mbed-os-example-lorawan-fuota_update.bin` to `./updates` folder. And rename it as `v2_update.bin`
+3. Then copy the file `lorawan-fuota-mbed-os-example_update.bin` to `./updates` folder. And rename it as `v2_update.bin`
 4. Create the delta file using:
     ```
     $ lorawan-fota-signing-tool sign-delta --old ./updates/v1_update.bin --new ./updates/v2_update.bin --output-format bin -o ./updates/v1_to_v2.bin
     ```
+
+## Chirpstack application setup
+Requirements: [Docker](https://www.docker.com/)
+1. Download the Chirpstack docker repo from https://github.com/brocaar/chirpstack-docker
+    ```
+    $git clone https://github.com/brocaar/chirpstack-docker.git
+    ```
+2. Update the configurations in `docker-compose.yml`
+3. Run the docker:
+    ```
+    $cd chirpstack-docker
+    $docker-compose up
+    ```
+    This will run the Chirpstack Application on `localhost:8080`
+    
+For more details please visit [chirpstack.io](https://www.chirpstack.io/)
+
 
 ## Firmware update using [Chirpstack server](https://www.chirpstack.io/)
 1. In the Chirpstack Application server, select the device and click on `CREATE FIRMWARE UPDATE JOB` in the FIRMWARE column of the device details.
