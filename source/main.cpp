@@ -228,7 +228,6 @@ static void send_message() {
     }
     else {
         printf("%d bytes scheduled for transmission on port %d\n", sizeof(r), 15);
-        //printf("(Rahul) data scheduled for transmission: %d\n", r);
     }
 }
 
@@ -247,11 +246,9 @@ static void queue_next_send_message() {
 
 int main() {
     printf("\nMbed OS 5 Firmware Update over LoRaWAN\n");
-    printf("\nasvin - Testing L-Tek FF1705 device - new update\n");
-    printf("\nasvin - This is the 5th update\n");
-    //printf("\nRahul - APP EUI: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-    //        APP_EUI[0], APP_EUI[1], APP_EUI[2], APP_EUI[3], APP_EUI[4], APP_EUI[5], APP_EUI[6], APP_EUI[7]);
-
+    printf("\nasvin - Testing FUOTA on L-Tek FF1705 device\n");
+    //printf("\nasvin - This is the 5th update\n");
+    
     // Enable trace output for this demo, so we can see what the LoRaWAN stack does
     mbed_trace_init();
     mbed_trace_exclude_filters_set("QSPIF");
