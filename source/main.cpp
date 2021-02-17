@@ -23,14 +23,15 @@
 #include "storage_helper.h"
 #include "UpdateCerts.h"
 #include "LoRaWANUpdateClient.h"
+#include "string"
 
 EventQueue evqueue;
 
 // Note: if the device has built-in dev eui (see dev_eui_helper.h), the dev eui will be overwritten in main()
-static uint8_t DEV_EUI[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  // (It is the built-in dev_eui)
-static uint8_t APP_EUI[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-static uint8_t APP_KEY[] = {  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-static uint8_t GEN_APP_KEY[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static uint8_t DEV_EUI[] = { 0x00, 0x80, 0x00, 0x00, 0x04, 0x00, 0x6a, 0x67 };  // 00 80 00 00 04 00 6a 67 (It is the built-in dev_eui)
+static uint8_t APP_EUI[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; // TTN ->{ 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x03, 0x44, 0x04 }
+static uint8_t APP_KEY[] = {  0xc3, 0xa6, 0x20, 0x04, 0x83, 0x73, 0x5f, 0xa5, 0x79, 0xfa, 0xa2, 0x44, 0xbc, 0xfb, 0xae, 0xb8}; // TTN -> { 0xA9, 0x4F, 0x9B, 0x35, 0x01, 0x6E, 0xD3, 0x7B, 0x00, 0x4B, 0x8D, 0x52, 0xE6, 0xC6, 0x03, 0x01 } 
+static uint8_t GEN_APP_KEY[] = { 0x23, 0xc3, 0x8c, 0x2d, 0x74, 0x1a, 0x40, 0xb7, 0x2e, 0x24, 0xa9, 0x2e, 0x8a, 0x0f, 0x6f, 0xf3 };
 
 
 static void lora_event_handler(lorawan_event_t event);
@@ -219,16 +220,28 @@ static void send_message() {
     }
 
     // otherwise just send a random message (this is where you'd put your sensor data)
-    int r = rand();
-    int16_t retcode = lorawan.send(15, (uint8_t*)(&r), sizeof(r), MSG_UNCONFIRMED_FLAG);
+    //int r = 10; // Rahul - I have changed it from rand() to 10
+    //Rahul - Changing the code to send json format
+	//r_str maximum length should be 255
+    std::string r_str = "{\"mac\":\"XX:XX:XX:XX:XX:XX\",\"firmware_version\":\"1.0\",\"customer_key\":\"INSERT-YOUR-CUSTOMER-KEY\",\"device_key\":\"INSERT-YOUR-DEVICE-KEY\",\"name\":\"device-name\"}";
+    uint8_t len = r_str.length();
+    printf("String lenght: %d\n", len);
+    uint8_t r[len];
+    std::copy(r_str.begin(), r_str.end(), r);
+
+    uint8_t tx_port = 222; //Uplink port -- Rahul
+    
+    //Rahul - I have changed the port from 15 to tx_port 
+    //int16_t retcode = lorawan.send(15, (uint8_t*)(&r), sizeof(r), MSG_UNCONFIRMED_FLAG);
+    int16_t retcode = lorawan.send(tx_port, (uint8_t*)(&r), sizeof(r), MSG_UNCONFIRMED_FLAG);
 
     if (retcode < 0) {
-        printf("send_message for normal message on port %d failed (%d)\n", 15, retcode);
+        printf("send_message for normal message on port %d failed (%d)\n", tx_port, retcode);
         queue_next_send_message();
     }
     else {
-        printf("%d bytes scheduled for transmission on port %d\n", sizeof(r), 15);
-        //printf("(Rahul) data scheduled for transmission: %d\n", r);
+        printf("%d bytes scheduled for transmission on port %d\n", sizeof(r), tx_port);
+        printf("data scheduled for transmission: %s\n", r_str);
     }
 }
 
@@ -248,8 +261,10 @@ static void queue_next_send_message() {
 int main() {
     printf("\nMbed OS 5 Firmware Update over LoRaWAN\n");
     printf("\nasvin - Testing L-Tek FF1705 device - new update\n");
-    printf("\nasvin - This is the 5th update\n");
-    //printf("\nRahul - APP EUI: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+    //printf("\nasvin - This is the FUOTA Test. 6th Firmware Update 12/02/2021-14:45 \n");
+    printf("\nasvin - Testing port 222 datarate-5 - v2 FUOTA update 17/02/2021 - 12:25\n");
+
+    //printf("\nasvin - APP EUI: %02x %02x %02x %02x %02x %02x %02x %02x\n",
     //        APP_EUI[0], APP_EUI[1], APP_EUI[2], APP_EUI[3], APP_EUI[4], APP_EUI[5], APP_EUI[6], APP_EUI[7]);
 
     // Enable trace output for this demo, so we can see what the LoRaWAN stack does
@@ -274,11 +289,23 @@ int main() {
     lorawan.add_app_callbacks(&callbacks);
 
     // Enable adaptive data rating
+    //Rahul - I have commented the adaptive data rate enabale function and added set data rate line
+    /*
     if (lorawan.enable_adaptive_datarate() != LORAWAN_STATUS_OK) {
         printf("enable_adaptive_datarate failed!\n");
         return -1;
     }
-
+    */
+    if(lorawan.disable_adaptive_datarate() != LORAWAN_STATUS_OK){
+        printf("disable_adaptive_datarate failed!! \n");
+        return -1;
+    }
+    if (lorawan.set_datarate(5) != LORAWAN_STATUS_OK) {
+        printf("Set datarate to 5 failed!! \n");
+        return -1;
+    }
+    
+   
     lorawan.set_device_class(CLASS_A);
 
     if (get_built_in_dev_eui(DEV_EUI, sizeof(DEV_EUI)) == 0) {

@@ -74,7 +74,8 @@
             "mbed-trace.enable": 1,
             "lora.over-the-air-activation": true,
             "lora.duty-cycle-on": false,
-            "lora.phy": "EU868"
+            "lora.phy": "EU868",
+            "lora.tx-max-size": 250
         },
 
         "FF1705_L151CC": {
