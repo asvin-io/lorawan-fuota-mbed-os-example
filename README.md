@@ -48,21 +48,11 @@ Target device: [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/)
     $ lorawan-fota-signing-tool sign-delta --old ./updates/v1_update.bin --new ./updates/v2_update.bin --output-format bin -o ./updates/v1_to_v2.bin
     ```
 
-## Firmware update using [Chirpstack server](https://www.chirpstack.io/)
-1. In the Chirpstack Application server, select the device and click on `CREATE FIRMWARE UPDATE JOB` in the FIRMWARE column of the device details.
-2. Upload the diff file `v1_to_v2.bin` to update job.
-3. Specify all other details. For example:
-    ```
-    Firmware update job-name: FUOTA_TEST
-    Select firmware file: v1_to_v2.bin
-    Redundant frames: 5
-    Unicast timeout: 15
-    Data-rate: 5
-    Frequency: 869525000
-    Multicast-group type: Class-C
-    Multicast-timeout: 128 seconds
-    ```
-4. Then create fuota deployment
-5. This will create a Multicast-group for the mulcast session setup and distribute update
+## Firmware update using [asvin platform](https://app.asvin.io/)
+1. Upload the diff file `v1_to_v2.bin` to the filegroup of LoRaWAN update files.
+2. Then create fuota deployment rollout in the rollouts tab
+    <img src="docs/imgs/new_rollout.png" width=550>
+3. This will create a Multicast-group for the mulcast session setup and distribute update
+4. After successful update, the device sends a success status LoRa uplink which will be used to store the current running firmware version of the end node.
 
 
