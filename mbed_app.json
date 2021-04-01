@@ -111,7 +111,7 @@
             "lorawan-update-client.slot2-fw-address"    : "(0x80430 + 72)",
             "lorawan-update-client.internal-flash-header": "0x08008000",
             "lorawan-update-client.interop-testing"     : false,
-            "lorawan-update-client.overwrite-version"   : false,
+            "lorawan-update-client.overwrite-version"   : true,
             "target.app_offset"                         : "0x8400",
             "target.header_offset"                      : "0x8000",
             "target.bootloader_img"                     : "bootloader/FF1705_L151CC.bin"

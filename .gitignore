@@ -10,3 +10,7 @@ source/UpdateCerts.h
 UpdateCerts.h
 updates/
 .fota-keys/
+BUILD/
+__pycache__/
+source/device_details.h
+

@@ -24,14 +24,19 @@
 #include "UpdateCerts.h"
 #include "LoRaWANUpdateClient.h"
 #include "string"
+#include "sstream"
+#include "device_details.h"
+
 
 EventQueue evqueue;
 
-// Note: if the device has built-in dev eui (see dev_eui_helper.h), the dev eui will be overwritten in main()
-static uint8_t DEV_EUI[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  // (It is the built-in dev_eui)
-static uint8_t APP_EUI[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
-static uint8_t APP_KEY[] = {  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
-static uint8_t GEN_APP_KEY[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+/*
+* Rahul - Variables for firmware version, registration, and update success
+*/
+static uint8_t FW_VER[] = { 0x00, 0x00, 0x00, 0x00};
+static bool update_suc = false;
+static bool register_dev = true;
+static uint8_t REG_DEV[] = {0x00};
 
 
 static void lora_event_handler(lorawan_event_t event);
@@ -59,11 +64,20 @@ static void turn_led_off() {
     led1 = 0;
 }
 
+//Rahul - RGB LED (Demo Setup)
+DigitalOut redLED(PA_10);
+DigitalOut greenLED(PA_9);
+DigitalOut bluedLED(PA_11);
+
+
 // This is already debounced to the eventqueue, so safe to run printf here
 static void switch_to_class_a() {
     printf("Switch to Class A\n");
     turn_led_off();
     uc.printHeapStats("CLASSA ");
+
+    //greenLED = false; //Rahul - Demo setup
+    bluedLED = false; //Rahul - Demo setup
 
     in_class_c_mode = false;
 
@@ -98,6 +112,9 @@ static void switch_class_c_rx2_params() {
 static void switch_to_class_c() {
     printf("Switch to Class C\n");
     turn_led_on();
+
+    //greenLED = true; //Rahul - Demo setup
+    bluedLED = true; //Rahul - Demo setup
 
     lorawan.cancel_sending();
     lorawan.disable_adaptive_datarate();
@@ -220,12 +237,51 @@ static void send_message() {
     }
 
     // otherwise just send a random message (this is where you'd put your sensor data)
-    //int r = 10; // Rahul - I have changed it from rand() to 10
+    //int r = 10;
     //Rahul - Changing the code to send json format
-	//r_str maximum length should be 255
-    std::string r_str = "{\"mac\":\"XX:XX:XX:XX:XX:XX\",\"firmware_version\":\"1.0\",\"customer_key\":\"INSERT-YOUR-CUSTOMER-KEY\",\"device_key\":\"INSERT-YOUR-DEVICE-KEY\",\"name\":\"device-name\"}";
+    static std::string r_str = "";
+    if(register_dev)
+    {        
+        //r_str = "{\"type\":\"reg\",\"data\":{\"mac\":\"" + DEVICE_MAC + "\",\"customer_key\":\"" + CUSTOMER_KEY + "\",\"device_key\":\"" + DEVICE_KEY + "\",\"name\":\"" + DEVICE_NAME + "\",\"firmware_version\":\"" + FW_VER_STR + "\"}}";
+        r_str = "{\"type\":\"reg\",\"data\":{\"name\":\"" + DEVICE_NAME + "\",\"mac\":\"" + DEVICE_MAC;
+        r_str += "\",\"device_key\":\"" + DEVICE_KEY + "\",\"customer_key\":\"" + CUSTOMER_KEY;
+        r_str += "\",\"firmware_version\":\"" + FW_VER_STR + "\"}}";
+
+        register_dev = false;
+        /*
+        if(xdot_eeprom_write_buf(0x0301, REG_DEV, sizeof(REG_DEV)) == 0)
+        {
+            printf("Successfully written REGISTER Status to EEPROM: %02x \n", REG_DEV[0]);
+        }
+        else
+        {
+            printf("There was an error while writing registration status to EEPROM\n");
+        }
+        */
+    }
+    else if(update_suc)
+    {
+        r_str = "{\"type\":\"suc\",\"data\":{\"mac\":\"" + DEVICE_MAC + "\",\"device_key\":\"" + DEVICE_KEY;
+        r_str += "\",\"customer_key\":\"" + CUSTOMER_KEY + "\",\"firmware_version\":\"" + FW_VER_STR + "\"}}";
+        update_suc = false;
+        if(xdot_eeprom_write_buf(0x0201, FW_VER, sizeof(FW_VER)) == 0)
+        {
+            printf("Successfully written Firmware Version to EEPROM: %02x %02x %02x %02x\n",
+            FW_VER[0], FW_VER[1], FW_VER[2], FW_VER[3]);
+        }
+        else
+        {
+            printf("There was an error while writing new firmware version to EEPROM\n");
+        }
+    }
+    else
+    {
+        //r_str = "{\"type\":\"suc\",\"data\":{\"mac\":\"" + DEVICE_MAC + "\",\"device_key\":\"" + DEVICE_KEY;
+        //r_str += "\",\"customer_key\":\"" + CUSTOMER_KEY+ "\",\"firmware_version\":\"" + FW_VER_STR + "\"}}";
+        r_str = "{\"type\":\"sen\",\"data\":\"SENSOR_DATA\"}";
+    }
     uint8_t len = r_str.length();
-    printf("String lenght: %d\n", len);
+    //printf("String lenght: %d\n", len);
     uint8_t r[len];
     std::copy(r_str.begin(), r_str.end(), r);
 
@@ -241,7 +297,7 @@ static void send_message() {
     }
     else {
         printf("%d bytes scheduled for transmission on port %d\n", sizeof(r), tx_port);
-        printf("data scheduled for transmission: %s\n", r_str);
+        printf("data scheduled for transmission: %s\n", r_str.c_str());
     }
 }
 
@@ -259,13 +315,55 @@ static void queue_next_send_message() {
 }
 
 int main() {
-    printf("\nMbed OS 5 Firmware Update over LoRaWAN\n");
-    printf("\nasvin - Testing L-Tek FF1705 device - new update\n");
-    //printf("\nasvin - This is the FUOTA Test. 6th Firmware Update 12/02/2021-14:45 \n");
-    printf("\nasvin - Testing port 222 datarate-5 - v2 FUOTA update 17/02/2021 - 12:25\n");
+    printf("\nasvin - Testing L-Tek FF1705 device - LoRaWAN FUOTA\n");
+    printf("\nasvin - Device FW Version - %s\n", FW_VER_STR.c_str());
+    printf("\nRGB LED - New Update\n");
+    //redLED = bluedLED = true;
+    redLED = greenLED = true;
 
-    //printf("\nasvin - APP EUI: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-    //        APP_EUI[0], APP_EUI[1], APP_EUI[2], APP_EUI[3], APP_EUI[4], APP_EUI[5], APP_EUI[6], APP_EUI[7]);
+    // Enable writing to ROM while in main
+    ScopedRomWriteLock make_rom_writable;
+    
+    static uint8_t FW_VER_PRV[] = {0x00, 0x00, 0x00, 0x00};
+    if (xdot_eeprom_read_buf(0x0201, FW_VER_PRV, sizeof(FW_VER_PRV)) == 0) 
+    {
+        printf("\nread previously written built-in dev Firmware version: %02x %02x %02x %02x\n",
+            FW_VER_PRV[0], FW_VER_PRV[1], FW_VER_PRV[2], FW_VER_PRV[3]);
+    }
+    
+    //Check for Firmware version
+    std::copy(FW_VER_STR.begin(), FW_VER_STR.end(), FW_VER);
+    int n = std::memcmp(FW_VER_PRV, FW_VER, sizeof(FW_VER));
+    if(n != 0)
+    { 
+        printf("This is the different firmware version, it will be written to EEPROM\n");
+        update_suc = true;
+
+    }
+    else
+    {
+        printf("This Firwmare Version is same as the last deployed firmware\n");
+        update_suc = false;
+    }
+
+    //Check for device registration
+    /*
+    if(xdot_eeprom_read_buf(0x0301, REG_DEV, sizeof(REG_DEV)) == 0)
+    {
+        printf("Registration status = %02X \n", REG_DEV[0]);
+        if(REG_DEV[0])
+        {
+            printf("Device is already registered.. No need to send register data again!! \n");
+            register_dev = false;
+        }
+        else
+        {
+            printf("Device is not registered.. It will be registered now..\n");
+            register_dev = true;
+            REG_DEV[0]=0x01;
+        }
+    }
+    */
 
     // Enable trace output for this demo, so we can see what the LoRaWAN stack does
     mbed_trace_init();
